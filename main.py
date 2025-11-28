@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends
 from carritoGLY import carrito, producto, cliente,  getCursor, psycopg, pedido
 
+app=app
 
 app = FastAPI(title="carrito de compra")
 cursor_Carrito = carrito()
