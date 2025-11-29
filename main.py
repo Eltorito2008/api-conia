@@ -1,54 +1,50 @@
+# main.py - Versión corregida
 from fastapi import FastAPI, Depends
-from carritoGLY import carrito, producto, cliente,  getCursor, psycopg, pedido
+import os
+import psycopg
+from typing import Generator
 
-app=app
+# Importar routers
+from routers.clientes_router import router as clientes_router
+from routers.productos_router import router as productos_router
+from routers.pedidos_router import router as pedidos_router
 
-app = FastAPI(title="carrito de compra")
-cursor_Carrito = carrito()
+app = FastAPI(title="Carrito de Compra API")
 
-@app.get("/productos")
-def ver_productos(cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.mostrarProductos(cursor)
+# Incluir routers
+app.include_router(clientes_router)
+app.include_router(productos_router)
+app.include_router(pedidos_router)
 
-@app.get("/pedido")
-def ver_pedido(cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.mostrarPedido(cursor)
+# Función de conexión simplificada
+def get_db():
+    password = os.getenv("password")
+    if not password:
+        raise ValueError("No password found in environment variables")
+    
+url= f"postgresql://postgres.pwfanhwpbybcaoqtnuec:{password}@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
 
-@app.get("/Cliente")
-def ver_cliente(cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.mostrarCliente(cursor)
+    
+conn = psycopg.connect(url, sslmode="require")
+return conn
 
-@app.post("/insertarPedido")
-def insertarElPedido(pedido1: pedido, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.insertarPedido(pedido1,cursor)
+@app.get("/")
+def root():
+    return {"message": "API Carrito de Compra funcionando"}
 
-@app.post("/agregarCliente")
-def agregar_Cliente(cliente: cliente, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.agregarCliente(cliente, cursor)
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
-@app.post("/agregarProducto")
-def agregar_producto(producto1: producto, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.agregarProducto(producto1, cursor)
-
-
-
-@app.delete("/eliminarCliente/{id_cliente}")
-def eliminar_cliente(id_cliente: int, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.eliminarCliente(id_cliente, cursor)
-
-@app.delete("/eliminarProducto/{id_producto}")
-def eliminar_producto(id_producto: int, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.eliminarProducto(id_producto, cursor)
-
-@app.delete("/eliminarPedido/{id_pedido}")
-def eliminar_pedido(id_pedido: int, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.eliminarPedido(id_pedido, cursor)
-
-@app.put("/modificarCliente/{id_cliente}")
-def modificar_cliente(id_cliente: int, cliente1: cliente, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.modificarCliente(id_cliente, cliente1, cursor)
-
-
-@app.put("/modificarProducto/{id_producto}")
-def modificar_producto(id_producto: int, producto1: producto, cursor: psycopg.Cursor = Depends(getCursor)):
-    return cursor_Carrito.modificarProducto(id_producto, producto1, cursor)
+@app.get("/test-db")
+def test_db():
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 as test")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return {"database": "connected", "result": result[0]}
+    except Exception as e:
+        return {"database": "error", "error": str(e)}
